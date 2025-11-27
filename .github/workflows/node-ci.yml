@@ -25,33 +25,29 @@ jobs:
 
       - name: Run tests
         run: npm test
-        
+
   security-checks:
     runs-on: self-hosted
     needs: build-and-test
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Trivy
-        run: |
-          sudo killall apt apt-get || true
-          sudo rm -f /var/lib/dpkg/lock-frontend
-          sudo rm -f /var/lib/dpkg/lock
-          sudo dpkg --configure -a
-          sudo apt-get update -y
-          sudo apt-get install wget apt-transport-https gnupg lsb-release -y
+      - name: Trivy FS Scan
+        run: trivy fs --format table -o fs-report.json .
 
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install trivy -y
-          
-      - name: Trivy FS scan
-        run: trivy fs --format table -o fs-report.json .  
-
-      - name: Install GitLeaks
-        run: sudo apt-get install gitleaks -y
-        
-      - name: Gitleaks Code Scan
+      - name: GitLeaks Code Scan
         run: gitleaks detect --source . --report-path gitleaks-report.json --report-format json
+
+      - name: Upload Trivy Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: fs-report.json
+
+      - name: Upload GitLeaks Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
