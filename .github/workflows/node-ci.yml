@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository
@@ -27,7 +27,7 @@ jobs:
         run: npm test
         
   security-checks:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build-and-test
     steps:
       - name: Checkout repository
