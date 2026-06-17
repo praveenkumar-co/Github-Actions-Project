@@ -9,23 +9,24 @@ on:
       - main
 
 jobs:
+
   build-and-test:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm install
 
-      - name: Run tests
+      - name: Run Tests
         run: npm test
 
   security-checks:
@@ -33,7 +34,7 @@ jobs:
     needs: build-and-test
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Install Trivy
@@ -51,7 +52,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
-      - name: Trivy FS Scan
+      - name: Trivy Filesystem Scan
         run: |
           trivy fs --format json --output fs-report.json .
 
@@ -62,7 +63,7 @@ jobs:
           sudo mv gitleaks /usr/local/bin/
           rm gitleaks_8.18.2_linux_x64.tar.gz
 
-      - name: GitLeaks Code Scan
+      - name: GitLeaks Secret Scan
         run: |
           gitleaks detect \
             --source . \
@@ -80,3 +81,25 @@ jobs:
         with:
           name: gitleaks-report
           path: gitleaks-report.json
+
+  sonar-scan:
+    runs-on: self-hosted
+    needs: security-checks
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+      - name: SonarQube Quality Gate Check
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        timeout-minutes: 10
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
